@@ -1,0 +1,18 @@
+[general]
+name = "rotary_embedding"
+backends = ["metal"]
+
+[torch]
+src = [
+  "torch-ext/torch_binding.cpp",
+  "torch-ext/torch_binding.h",
+]
+
+[kernel.rotary_embedding_metal]
+backend = "metal"
+src = [
+  "rotary-embedding-metal/rotary_embedding.metal",
+  "rotary-embedding-metal/rotary_embedding.mm",
+  "rotary-embedding-metal/utils.metal",
+]
+depends = ["torch"]
