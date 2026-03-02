@@ -146,13 +146,15 @@ def test_rotary_embedding(
     # Run kernel.
     ops.rotary_embedding(positions, query, key, head_size, cos_sin_cache, is_neox)
 
-    # Run reference.
+    # Run reference on CPU copies (ref modifies in-place, so we must capture them).
+    query_ref_cpu = query_ref.cpu()
+    key_ref_cpu = key_ref.cpu()
     _ref_rotary_embedding(
-        positions.cpu() if device != "cpu" else positions,
-        query_ref.cpu() if device != "cpu" else query_ref,
-        key_ref.cpu() if device != "cpu" else key_ref,
+        positions.cpu(),
+        query_ref_cpu,
+        key_ref_cpu,
         head_size,
-        cos_sin_cache.cpu() if device != "cpu" else cos_sin_cache,
+        cos_sin_cache.cpu(),
         is_neox,
     )
 
@@ -164,11 +166,8 @@ def test_rotary_embedding(
     else:  # bfloat16
         atol, rtol = 2e-2, 2e-2
 
-    query_ref_dev = query_ref.to(device=device)
-    key_ref_dev = key_ref.to(device=device)
-
-    torch.testing.assert_close(query, query_ref_dev, atol=atol, rtol=rtol)
-    torch.testing.assert_close(key, key_ref_dev, atol=atol, rtol=rtol)
+    torch.testing.assert_close(query.cpu(), query_ref_cpu, atol=atol, rtol=rtol)
+    torch.testing.assert_close(key.cpu(), key_ref_cpu, atol=atol, rtol=rtol)
 
 
 @pytest.mark.parametrize("device", DEVICES)
@@ -196,15 +195,15 @@ def test_rotary_embedding_no_key(
     # Run kernel with key=None.
     ops.rotary_embedding(positions, query, None, head_size, cos_sin_cache, is_neox)
 
-    # Run reference with key=None.
+    # Run reference with key=None on CPU copy.
+    query_ref_cpu = query_ref.cpu()
     _ref_rotary_embedding(
         positions.cpu(),
-        query_ref.cpu(),
+        query_ref_cpu,
         None,
         head_size,
         cos_sin_cache.cpu(),
         is_neox,
     )
 
-    query_ref_dev = query_ref.to(device=device)
-    torch.testing.assert_close(query, query_ref_dev, atol=1e-5, rtol=1e-5)
+    torch.testing.assert_close(query.cpu(), query_ref_cpu, atol=1e-5, rtol=1e-5)
