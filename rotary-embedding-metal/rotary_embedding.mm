@@ -4,23 +4,17 @@
 
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
-#include <dlfcn.h>
 #include <string>
+
+// Include the auto-generated header with embedded metallib.
+#ifdef EMBEDDED_METALLIB_HEADER
+#include EMBEDDED_METALLIB_HEADER
+#else
+#error "EMBEDDED_METALLIB_HEADER not defined"
+#endif
 
 static inline id<MTLBuffer> getMTLBufferStorage(const torch::Tensor &tensor) {
   return __builtin_bit_cast(id<MTLBuffer>, tensor.storage().data());
-}
-
-static std::string getModuleDirectory() {
-  Dl_info dl_info;
-  if (dladdr((void *)getModuleDirectory, &dl_info)) {
-    std::string path(dl_info.dli_fname);
-    size_t pos = path.find_last_of('/');
-    if (pos != std::string::npos) {
-      return path.substr(0, pos);
-    }
-  }
-  return ".";
 }
 
 void rotary_embedding(torch::Tensor &positions, torch::Tensor &query,
@@ -74,16 +68,11 @@ void rotary_embedding(torch::Tensor &positions, torch::Tensor &query,
     id<MTLCommandBuffer> cmdBuf = stream->commandBuffer();
     TORCH_CHECK(cmdBuf, "Failed to get command buffer");
 
-    // Load metallib.
-    std::string moduleDir = getModuleDirectory();
-    std::string metallibPath = moduleDir + "/" + METALLIB_PATH;
-
-    NSString *metallibPathStr =
-        [NSString stringWithUTF8String:metallibPath.c_str()];
-    NSURL *metallibURL = [NSURL fileURLWithPath:metallibPathStr];
+    // Load embedded Metal library.
     NSError *error = nil;
-    id<MTLLibrary> lib = [device newLibraryWithURL:metallibURL error:&error];
-    TORCH_CHECK(lib, "Failed to load Metal library at ", metallibPath,
+    id<MTLLibrary> lib =
+        EMBEDDED_METALLIB_NAMESPACE::createLibrary(device, &error);
+    TORCH_CHECK(lib, "Failed to create Metal library from embedded data",
                 error ? [NSString stringWithFormat:@": %@",
                                                    error.localizedDescription]
                             .UTF8String
