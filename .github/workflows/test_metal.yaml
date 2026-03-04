@@ -1,0 +1,39 @@
+name: "Build and test (Metal)"
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-xlarge
+            xcode: "/Applications/Xcode_16.2.app"
+          - os: macos-26-xlarge
+            xcode: "/Applications/Xcode_26.0.app"
+    steps:
+      - name: "Select Xcode"
+        run: sudo xcrun xcode-select -s ${{ matrix.xcode }}
+      - name: "Install Metal Toolchain"
+        if: matrix.os == 'macos-26-xlarge'
+        run: xcodebuild -downloadComponent metalToolchain
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            sandbox = relaxed
+      - uses: cachix/cachix-action@v16
+        with:
+          name: huggingface
+
+      - name: Build kernel
+        run: nix build .#redistributable.torch29-metal-aarch64-darwin -L
+      - name: Test kernel
+        run: nix develop .#test --command pytest tests/ -v
