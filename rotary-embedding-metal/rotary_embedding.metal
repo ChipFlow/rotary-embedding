@@ -62,8 +62,9 @@ kernel void rotary_embedding_kernel(
 
     const float x = static_cast<float>(query[token_head + x_index]);
     const float y = static_cast<float>(query[token_head + y_index]);
-    query[token_head + x_index] = static_cast<scalar_t>(x * cos_val - y * sin_val);
-    query[token_head + y_index] = static_cast<scalar_t>(y * cos_val + x * sin_val);
+    // Use FMA (fused multiply-add) for better precision
+    query[token_head + x_index] = static_cast<scalar_t>(fma(x, cos_val, -y * sin_val));
+    query[token_head + y_index] = static_cast<scalar_t>(fma(y, cos_val, x * sin_val));
   }
 
   // Process key heads (if key is provided).
@@ -88,8 +89,9 @@ kernel void rotary_embedding_kernel(
 
       const float x = static_cast<float>(key[token_head + x_index]);
       const float y = static_cast<float>(key[token_head + y_index]);
-      key[token_head + x_index] = static_cast<scalar_t>(x * cos_val - y * sin_val);
-      key[token_head + y_index] = static_cast<scalar_t>(y * cos_val + x * sin_val);
+      // Use FMA (fused multiply-add) for better precision
+      key[token_head + x_index] = static_cast<scalar_t>(fma(x, cos_val, -y * sin_val));
+      key[token_head + y_index] = static_cast<scalar_t>(fma(y, cos_val, x * sin_val));
     }
   }
 }
