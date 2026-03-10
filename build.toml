@@ -10,6 +10,7 @@ src = [
 
 [kernel.rotary_embedding_metal]
 backend = "metal"
+metal-std-version = "metal3.1"
 src = [
   "rotary-embedding-metal/rotary_embedding.metal",
   "rotary-embedding-metal/rotary_embedding.mm",

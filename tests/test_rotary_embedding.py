@@ -7,17 +7,11 @@ for both NeoX (Llama/Mistral) and GPT-J rotation styles.
 import pytest
 import torch
 
+from kernels_test_utils import get_available_devices
+
 import rotary_embedding as ops
 
-
-def _is_mps_available() -> bool:
-    return hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
-
-
-if _is_mps_available():
-    DEVICES = ["mps"]
-else:
-    DEVICES = [f"cuda:{i}" for i in range(max(1, torch.cuda.device_count()))]
+DEVICES = get_available_devices()
 
 DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 HEAD_SIZES = [64, 128, 256]
